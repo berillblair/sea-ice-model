@@ -44,7 +44,7 @@
         </div>
         <div class="horiz">
           <canvas id="utility-threshold" width="400px" height="400px"></canvas>
-          <canvas id="forecast-reliance" width="400px" height="400px"></canvas>
+          <canvas id="informational-environment-reliance" width="400px" height="400px"></canvas>
         </div>
       </div>
     </div>
@@ -53,14 +53,18 @@
     <input type="range" value="2022" min="2022" max="2035" id="release-year" />
     <label id="speed-label" for="speed">Model Speed</label>
     <input type="range" value="0" min="1" max="300" id="speed" />
-    <label id="forecast-reliability-label" for="forecast-reliability">Forecast Reliability</label>
-    <input type="range" value="7" min="6" max="9" id="forecast-reliability" />
+    <label id="informational-environment-reliability-label" for="informational-environment-reliability">Reliability of informational environment</label>
+    <input type="range" value="6" min="1" max="10" id="informational-environment-reliability" />
     <label id="provider-trust-label" for="provider-trust">Provider Trust</label>
     <input type="range" value="5" min="1" max="10" id="provider-trust" />
-    <label id="product-quality-label" for="product-quality">Quality of new product</label>
-    <input type="range" value="0.5" min="0.1" step="0.1" max="1" id="product-quality" />
+    <label id="new-product-quality-label" for="new-product-quality">Quality of new product</label>
+    <input type="range" value="0.5" min="0.1" step="0.1" max="1" id="new-product-quality" />
     <label id="prop-he-label" for="prop-he">Proportion Highly Experienced</label>
     <input type="range" value="0.40" min="0" step="0.01" max="1" id="prop-he" />
+
+    <br>
+    <label id="trial-length-label" for="trial-length">Trial Length</label>
+    <input type="range" value="1" min="1" step="1" max="3" id="trial-length" />
 
     <br /> <br />
     <label id="min-year-label" for="min-year-view">Graph Begin Year</label>
@@ -72,7 +76,12 @@
     <label id="prop-ea-label" for="prop-he">Proportion Early Adopters</label>
     <input type="range" value="0.33" min="0" step="0.01" max="1" id="prop-ea" />
 
+    <input type="checkbox" id="high-sea-ice" />
+    <label for="high-sea-ice">Enable High Sea Ice Cover Years?</label>
+
     <label for="realism">Model realism</label>
+
+    <p id="simulation-number"></p>
 
     <select name="Model Realism" id="realism">
       <option value="realistic">Realistic</option>
@@ -86,6 +95,7 @@
     </div>
 
     <button id="play">Play</button>
+    <button id="record">Run 30 Times and Record</button>
 
     <script src="index.js"></script>
   </body>

@@ -139,22 +139,175 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
     let GRID_WIDTH;
     let GRID_HEIGHT;
 
-    let product_release_year = parseInt(document.getElementById("release-year").value);
+    let new_product_release_year = parseInt(document.getElementById("release-year").value);
 
-    let product_quality = parseFloat(document.getElementById("product-quality").value);
+    let new_product_quality = parseFloat(document.getElementById("new-product-quality").value);
 
-    let forecast_reliability = parseInt(document.getElementById("forecast-reliability").value)/10;
+    let informational_environment_reliability = parseInt(document.getElementById("informational-environment-reliability").value)/10;
     let provider_trust = parseInt(document.getElementById("provider-trust").value)/10;
 
     let proportion_highly_experienced = parseFloat(document.getElementById("prop-he").value);
     let proportion_early_adopters = parseFloat(document.getElementById("prop-ea").value);
+    let trialLength = 1;
 
-    let should_inc_product_utility = false;
+    let highSeaIce = false;
+    let heavyIceCoverSeasons = [];
+    let heavyIceYears = {};
+
+    let should_inc_new_product_utility = false;
+    let timesToRun = 1;
 
     let month = 11;
     let year = 2021;
 
+    let simulation = 0;
+    let routeHits = {};
+    let simulationData = {};
+
     // setInterval(()=>console.log(module.get_routes()), 1000);
+
+    function makeCsv() {
+        let routeAverages = {};
+        let simAverages = {};
+
+        let csvOut = [];
+
+        for(let y=0;y<=100;y++) {
+            csvOut[y] = [];
+        }
+
+        for (let routeId = 1; routeId <= 29; routeId++) {
+            for(let simulationId=0;simulationId<timesToRun;simulationId++) {
+                for (let _year = 2022; _year <= 2035; _year++) {
+                    if(!routeAverages[_year]) routeAverages[_year] = {};
+                    if(!routeAverages[_year][routeId]) routeAverages[_year][routeId] = 0;
+
+                    routeAverages[_year][routeId] += routeHits[simulationId][_year][routeId];
+                }
+            }
+        }
+
+        for(let simulationId=0;simulationId<timesToRun;simulationId++) {
+            for (let _year = 2022; _year <= 2035; _year++) {
+                if(!simAverages[_year]) simAverages[_year] = {
+                    adoptionRatio: 0,
+                    averageCertainty: 0,
+                    averageInfEnv: 0,
+                    averageUtility: 0,
+                    averageInTrial: 0
+                };
+                simAverages[_year].adoptionRatio += simulationData[simulationId][_year].adoptionRatio;
+                simAverages[_year].averageCertainty += simulationData[simulationId][_year].averageCertainty;
+                simAverages[_year].averageInfEnv += simulationData[simulationId][_year].averageInfEnv;
+                simAverages[_year].averageUtility += simulationData[simulationId][_year].averageUtility;
+                simAverages[_year].averageInTrial += simulationData[simulationId][_year].averageInTrial;
+            }
+        }
+
+        for (let _year = 2022; _year <= 2035; _year++) {
+            if(!simAverages[_year]) simAverages[_year] = {};
+            simAverages[_year].adoptionRatio /= timesToRun;
+            simAverages[_year].averageCertainty /= timesToRun;
+            simAverages[_year].averageInfEnv /= timesToRun;
+            simAverages[_year].averageUtility /= timesToRun;
+            simAverages[_year].averageInTrial /= timesToRun;
+        }
+
+        csvOut[0][0] = "Release year";
+        csvOut[1][0] = new_product_release_year;
+
+        csvOut[0][1] = "Informational Environment Reliability";
+        csvOut[1][1] = informational_environment_reliability;
+
+        csvOut[0][2] = "Provider trust";
+        csvOut[1][2] = provider_trust;
+
+        csvOut[0][3] = "New product quality";
+        csvOut[1][3] = new_product_quality;
+
+        csvOut[0][4] = "Percentage highly experienced";
+        csvOut[1][4] = proportion_highly_experienced;
+
+        csvOut[0][5] = "Percentage early adopters";
+        csvOut[1][5] = proportion_early_adopters;
+
+        csvOut[0][6] = "Increasing product utility";
+        csvOut[1][6] = should_inc_new_product_utility ? "yes" : "no";
+
+        csvOut[0][7] = "Trial length";
+        csvOut[1][7] = trialLength;
+
+        csvOut[0][8] = "High sea ice?";
+        csvOut[1][8] = highSeaIce ? "yes" : "no";
+
+        for(let x=0;x<2035-2021;x++) {
+            csvOut[2][x + 1] = x + 2022;
+        }
+
+
+        for (let routeId = 1; routeId <= 29; routeId++) {
+            csvOut[routeId + 2][0] = `Route ${routeId}`;
+
+            for (let _year = 2022; _year <= 2035; _year++) {
+                routeAverages[_year][routeId] /= timesToRun;
+
+                let x = _year - 2021;
+
+                let result = routeAverages[_year][routeId];
+
+                csvOut[routeId + 2][x] = isNaN(result) ? 0 : result;
+            }
+        }
+
+        csvOut[2][20] = "Average Certainty";
+        csvOut[2][21] = "Adoption Ratio";
+        csvOut[2][22] = "Average Informational Environment Reliance";
+        csvOut[2][23] = "Average Utility";
+        csvOut[2][24] = "In-Trial Ratio";
+
+        for(let _year = 2022; _year <= 2035; _year++) {
+            csvOut[(_year - 2021) + 2][19] = _year;
+
+            csvOut[_year - 2021 + 2][20] = simAverages[_year].averageCertainty;
+            csvOut[_year - 2021 + 2][21] = simAverages[_year].adoptionRatio;
+            csvOut[_year - 2021 + 2][22] = simAverages[_year].averageInfEnv;
+            csvOut[_year - 2021 + 2][23] = simAverages[_year].averageUtility;
+            csvOut[_year - 2021 + 2][24] = simAverages[_year].averageInTrial;
+        }
+
+        csvOut[19][18] = "Simulation";
+        for(let simulationId=0;simulationId<timesToRun;simulationId++) {
+            let y = (simulationId * (2035 - 2022)) + 20;
+
+            if(!csvOut[y]) csvOut[y] = [];
+
+            csvOut[y][25] = (heavyIceYears[simulationId] || []).join(";");
+            for(let _year = 2022; _year <= 2035; _year++) {
+                let y = (simulationId * (2035 - 2022)) + 20 + (_year - 2022);
+
+                if(!csvOut[y]) csvOut[y] = [];
+
+                csvOut[y][18] = simulationId;
+                csvOut[y][19] = _year;
+                csvOut[y][20] = simulationData[simulationId][_year].averageCertainty;
+                csvOut[y][21] = simulationData[simulationId][_year].adoptionRatio;
+                csvOut[y][22] = simulationData[simulationId][_year].averageCertainty;
+                csvOut[y][23] = simulationData[simulationId][_year].averageUtility;
+                csvOut[y][24] = simulationData[simulationId][_year].averageInTrial;
+            }
+        }
+
+        let csvString = "";
+
+        for(let y=0;y<csvOut.length;y++) {
+            for(let x = 0;x<=40;x++) {
+                csvString += ((csvOut[y][x] === undefined) || ((typeof csvOut[y][x] === "number") && isNaN(csvOut[y][x])) ? "" : csvOut[y][x]) + ",";
+            }
+            csvString += "\n";
+        }
+
+        window.open(encodeURI("data:text/csv;charset=utf-8," + csvString));
+    }
 
     let monitor_charts = {
         average_certainty: new Chart(
@@ -340,15 +493,15 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                 }
             }
         ),
-        reliance_on_forecast: new Chart(
-            document.getElementById("forecast-reliance"),
+        reliance_on_informational_environment: new Chart(
+            document.getElementById("informational-environment-reliance"),
             {
                 type: "line",
                 data: {
                     labels: [],
 
                     datasets: [{
-                        label: "Average reliance on forecast",
+                        label: "Average reliance on informational environment",
                         data: [],
                         backgroundColor: [
                             'rgba(255, 99, 132, 0.2)',
@@ -397,7 +550,90 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
         });
     }
 
+    const routes = { //keys are the difficulty
+        //1
+        1: [
+            [[1,2,4,1], 1],
+            [[1,2,4,2,1], 2],
+            [[1,2,4,6,4,2,1], 3],
+        ],
+        //4
+        2: [
+            [[1,2,4,6,8,6,2,1], 4],
+            [[1,2,4,6,8,6,4,2,1], 5],
+            [[1,2,5,2,1], 6],
+            [[1,4,6,8,6,4,2,1], 7],
+            [[1,4,6,8,9,3,1], 8],
+        ],
+        //9
+        3: [
+            [[1,2,4,6,7,6,2,1], 9],
+            [[1,2,4,6,7,6,4,2,1], 10],
+        ],
+        //11
+        4: [
+            [[1,2,4,6,10,7,17,6,4,2,1], 11],
+            [[1,2,4,6,7,10,9,3,1], 12],
+            [[1,2,4,6,7,12,7,6,5,2,1], 13],
+            [[1,2,4,6,8,10,7,6,4,2,1], 14],
+            [[1,2,4,6,8,16,10,6,4,2,1], 15],
+        ],
+        //16
+        5: [
+            [[1,2,4,6,20,18,19,6,4,2,1], 16],
+            [[1,2,4,6,20,6,2,1], 17],
+            [[1,4,6,20,6,4,2,1], 18],
+            [[1,4,6,21,9,3,1], 19],
+        ],
+        //20
+        6: [
+            [[1,2,4,6,19,7,17,6,4,2,1], 20],
+            [[1,2,4,6,20,19,7,6,4,2,1], 21],
+            [[1,2,4,6,20,6,4,2,1], 22],
+            [[1,2,4,6,7,19,22,1], 23],
+        ],
+        //24
+        7: [
+            [[1,2,4,6,7,14,13,11], 24],
+            [[1,2,4,6,8,14,11], 25]
+        ],
+        8: [
+            [[1,2,4,6,20,14,11], 26],
+            [[1,2,4,6,21,14,1], 27],
+            [[1,2,4,6,7,12,13,11], 28]
+        ],
+        9: [
+            [[1,2,4,6,7,12,15,13,14,11], 29]
+        ]
+    };
+
+    function getRandomInt(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
+    }
+
+    function getRandomRoute(adjustment, ...difficulties) {
+        let difficulty = difficulties[getRandomInt(0, difficulties.length)];
+
+        let possible_routes = routes[Math.max(difficulty - adjustment, 1)];
+
+        let routeIndex = getRandomInt(0, possible_routes.length);
+        let route = possible_routes[routeIndex][0];
+        let routeId = possible_routes[routeIndex][1];
+
+        if(!routeHits[simulation]) routeHits[simulation] = {};
+        if(!routeHits[simulation][year]) routeHits[simulation][year] = {};
+        if(!routeHits[simulation][year][routeId]) routeHits[simulation][year][routeId] = 0;
+
+        routeHits[simulation][year][routeId]++;
+
+        return route;
+    }
+
     function getIteratorTaskGenerator() {
+        let adjustment = heavyIceCoverSeasons.includes(year) ? 2 : 0;
+
         switch(year) {
             case 2022:
             case 2023:
@@ -407,368 +643,108 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
             case 2027:
             case 2028:
                 switch(month) {
+                    //April
                     case 4: return (ship, ship_id, num_ships, certainty_pos)=>{
-                        if(certainty_pos >= num_ships/2 && ship.experience_level >= 0.6) { //
-                            addGotoTask(ship_id, [1, 2, 5, 2, 1]);
+                        if(certainty_pos >= num_ships/2 && ship.certainty >= 0.5) {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 2));
                         } else {
-                            addGotoTask(ship_id, [1, 2, 4, 2, 1]);
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 1));
                         }
                     };
                     case 5: return (ship, ship_id, num_ships, certainty_pos)=>{
-                        if(certainty_pos >= num_ships/2 && ship.experience_level >= 0.6) { //
-                            addGotoTask(ship_id, [1, 2, 4, 6, 8, 6, 2, 1])
+                        if(certainty_pos >= num_ships/2 && ship.certainty >= 0.5) {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 2));
                         } else {
-                            addGotoTask(ship_id, [1, 2, 4, 6, 8, 2, 1]);
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 1));
                         }
                     };
                     case 6: return (ship, ship_id, num_ships, certainty_pos)=>{
-                        if(certainty_pos >= num_ships/2 && ship.experience_level >= 0.6) {
-                            if(ship_id%2 === 0) { //If the ship ID is even, so that we can split up the ships
-                                addGotoTask(ship_id, [1, 2, 4, 6, 7, 10, 9, 3, 1]);
-                            } else {
-                                module.add_ship_task(ship_id, {
-                                    task: "GoTo",
-                                    data: poi[0]
-                                });
-                                module.add_ship_task(ship_id, {
-                                    task: "GoTo",
-                                    data: poi[1]
-                                });
-                                module.add_ship_task(ship_id, {
-                                    task: "GoTo",
-                                    data: poi[3]
-                                });
-                                module.add_ship_task(ship_id, {
-                                    task: "GoTo",
-                                    data: poi[5]
-                                });
-                                module.add_ship_task(ship_id, {
-                                    task: "GoTo",
-                                    data: poi[7]
-                                });
-                                module.add_ship_task(ship_id, {
-                                    task: "GoTo",
-                                    data: poi[5]
-                                });
-                                module.add_ship_task(ship_id, {
-                                    task: "GoTo",
-                                    data: poi[3]
-                                });
-                                module.add_ship_task(ship_id, {
-                                    task: "GoTo",
-                                    data: poi[1]
-                                });
-                                module.add_ship_task(ship_id, {
-                                    task: "GoTo",
-                                    data: poi[0]
-                                });
-                            }
+                        if(certainty_pos >= num_ships/2 && ship.certainty >= 0.5) {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 2,4));
                         } else {
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[0]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[1]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[5]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[6]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[5]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[3]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[1]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[0]
-                            });
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 3));
                         }
                     };
                     case 7: return (ship, ship_id, num_ships, certainty_pos)=>{
-                        if(ship.experience_level >= 0.6 && certainty_pos >= num_ships/2) {
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[10]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[12]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[11]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[6]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[5]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[3]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[1]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[0]
-                            });
-                        } else if(certainty_pos <= num_ships/5) {
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[0]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[1]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[3]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[5]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[7]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[5]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[3]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[0]
-                            });
-                        } else if(ship_id%2 === 0) {
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[0]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[2]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[8]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[7]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[5]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[3]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[0]
-                            });
+                        if(certainty_pos >= num_ships/2 && ship.certainty >= 0.5) {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 7,8));
                         } else {
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[10]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[13]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[7]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[5]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[3]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[1]
-                            });
-                            module.add_ship_task(ship_id, {
-                                task: "GoTo",
-                                data: poi[0]
-                            });
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 2,5,7));
                         }
                     };
                     case 8: return (ship, ship_id, num_ships, certainty_pos)=> {
-                        if(certainty_pos >= num_ships/2) {
-                            if(ship_id%2 === 0) {
-                                addGotoTask(ship_id, [1, 2, 4, 6, 8, 16, 10, 6, 4, 2, 1]);
-                            } else {
-                                addGotoTask(ship_id, [1, 2, 4, 6, 7, 12, 15, 13, 14, 11]);
-                            }
+                        if(certainty_pos >= num_ships/2 && ship.certainty >= 0.5) {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 7,8,9));
                         } else {
-                            if(ship_id%2 === 0) {
-                                addGotoTask(ship_id, [1, 2, 4, 6, 8, 10, 7, 6, 4, 2, 1]);
-                            } else {
-                                addGotoTask(ship_id, [1, 2, 4, 6, 7, 14, 13, 11]);
-                            }
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 4,7,8));
                         }
                     }
-                    case 9:
-                        return (ship, ship_id, num_ships, certainty_pos)=> {
-                            if(certainty_pos >= num_ships/2) {
-                                if(ship_id%2 === 0) {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 8, 12, 7, 6, 5, 2, 1]);
-                                } else {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 10, 7, 17, 6, 4, 2, 1]);
-                                }
-                            } else {
-                                addGotoTask(ship_id, [1, 2, 4, 1]);
-                            }
+                    case 9: return (ship, ship_id, num_ships, certainty_pos)=> {
+                        if(certainty_pos >= num_ships/2 && ship.certainty >= 0.5) {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 4,5));
+                        } else {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 1));
                         }
-                    case 10:
-                        return (ship, ship_id, num_ships, certainty_pos)=> {
-                            if(certainty_pos >= num_ships/2 && ship.experience_level >= 0.6) {
-                                addGotoTask(ship_id, [1, 2, 4, 6, 7, 6, 4, 2, 1]);
-                            } else {
-                                addGotoTask(ship_id, [1, 2, 4, 1]);
-                            }
+                    }
+                    case 10: return (ship, ship_id, num_ships, certainty_pos)=> {
+                        if(certainty_pos >= num_ships/2 && ship.certainty >= 0.5) {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 3));
+                        } else {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 1));
                         }
+                    }
                 }
-            case 2029:
-            case 2030:
-            case 2031:
-            case 2032:
-            case 2033:
-            case 2034:
-            case 2035:
+            default:
                 switch(month) {
-                    case 4:
-                        return (ship, ship_id, num_ships, certainty_pos)=>{
-                            if(ship.experience_level >= 0.6 && certainty_pos >= num_ships/2) {
-                                addGotoTask(ship_id, [1, 2, 4, 6, 20, 6, 2, 1]);
-                            } else {
-                                addGotoTask(ship_id, [1, 2, 4, 6, 4, 2, 1]);
-                            }
+                    case 4: return (ship, ship_id, num_ships, certainty_pos)=> {
+                        if(certainty_pos >= num_ships/2 && ship.certainty >= 0.5) {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 5));
+                        } else {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 2));
                         }
-                    case 5:
-                        return (ship, ship_id, num_ships, certainty_pos)=>{
-                            if(ship.experience_level >= 0.6 && certainty_pos >= num_ships/2) {
-                                if(ship_id%2 === 0) {
-                                    if(ship_id%4 === 0) {
-                                        addGotoTask(ship_id, [1, 2, 4, 6, 7, 19, 22, 1]);
-                                    } else {
-                                        addGotoTask(ship_id, [1, 2, 4, 6, 20, 6, 4, 2, 1]);
-                                    }
-                                } else {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 7, 6, 2, 1]);
-                                }
-                            } else {
-                                addGotoTask(ship_id, [1, 2, 4, 6, 7, 6, 2, 1]);
-                            }
+                    }
+                    case 5: return (ship, ship_id, num_ships, certainty_pos)=> {
+                        if(certainty_pos >= num_ships/2 && ship.certainty >= 0.5) {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 5,7));
+                        } else {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 3));
                         }
-                    case 6:
-                        return (ship, ship_id, num_ships, certainty_pos)=>{
-                            if(ship.experience_level >= 0.6 && certainty_pos >= num_ships/2) {
-                                addGotoTask(ship_id, [1, 2, 4, 6, 7, 12, 13, 11]);
-                            } else {
-                                if(certainty_pos <= num_ships/5) {
-                                    addGotoTask(ship_id, [1, 4, 6, 20, 6, 4, 2, 1]);
-                                } else {
-                                    if(ship_id%2 === 0) {
-                                        addGotoTask(ship_id, [1,  4, 6, 21, 9, 3, 1]);
-                                    } else {
-                                        addGotoTask(ship_id, [1, 2, 4, 6, 20, 14, 11]);
-                                    }
-                                }
-                            }
+                    }
+                    case 6: return (ship, ship_id, num_ships, certainty_pos)=> {
+                        if(certainty_pos >= num_ships/2 && ship.certainty >= 0.5) {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 7,8));
+                        } else {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 5,7));
                         }
-                    case 7:
-                        return (ship, ship_id, num_ships, certainty_pos)=> {
-                            if(certainty_pos >= num_ships/2) {
-                                if(ship_id%2 === 0) {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 20, 18, 19, 6, 4, 2, 1]);
-                                } else {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 7, 12, 15, 13, 14, 11]);
-                                }
-                            } else {
-                                if(ship_id%2 === 0) {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 20, 19, 7, 6, 4, 2, 1]);
-                                } else {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 7, 14, 13, 11]);
-                                }
-                            }
+                    }
+                    case 7: return (ship, ship_id, num_ships, certainty_pos)=> {
+                        if(certainty_pos >= num_ships/2 && ship.certainty >= 0.5) {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 7,8,9));
+                        } else {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 6,7,8));
                         }
-                    case 8:
-                        return (ship, ship_id, num_ships, certainty_pos)=> {
-                            if(certainty_pos >= num_ships/2) {
-                                if(ship_id%2 === 0) {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 20, 18, 19, 6, 4, 2, 1]);
-                                } else {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 7, 12, 15, 13, 14, 11]);
-                                }
-                            } else {
-                                if(ship_id%2 === 0) {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 20, 19, 7, 6, 4, 2, 1]);
-                                } else {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 7, 14, 13, 11]);
-                                }
-                            }
+                    }
+                    case 8: return (ship, ship_id, num_ships, certainty_pos)=> {
+                        if(certainty_pos >= num_ships/2 && ship.certainty >= 0.5) {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 7,8,9));
+                        } else {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 7,8,9));
                         }
-                    case 9:
-                        return (ship, ship_id, num_ships, certainty_pos)=> {
-                            if(certainty_pos >= num_ships/2) {
-                                if(ship_id%2 === 0) {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 20, 18, 19, 6, 4, 2, 1]);
-                                } else {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 7, 12, 15, 13, 14, 11]);
-                                }
-                            } else {
-                                if(ship_id%2 === 0) {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 20, 19, 7, 6, 4, 2, 1]);
-                                } else {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 7, 14, 13, 11]);
-                                }
-                            }
+                    }
+                    case 9: return (ship, ship_id, num_ships, certainty_pos)=> {
+                        if(certainty_pos >= num_ships/2 && ship.certainty >= 0.5) {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 5,8,9));
+                        } else {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 6,7));
                         }
-                    case 10:
-                        return (ship, ship_id, num_ships, certainty_pos)=> {
-                            if(certainty_pos >= num_ships/2) {
-                                if(ship_id%2 === 0) {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 7, 12, 7, 6, 5, 2, 1]);
-                                } else {
-                                    addGotoTask(ship_id, [1, 2, 4, 6, 19, 7, 17, 6, 4, 2, 1]);
-                                }
-                            } else {
-                                addGotoTask(ship_id, [1, 2, 4, 1]);
-                            }
+                    }
+                    case 10: return (ship, ship_id, num_ships, certainty_pos)=> {
+                        if(certainty_pos >= num_ships/2 && ship.certainty >= 0.5) {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 6));
+                        } else {
+                            addGotoTask(ship_id, getRandomRoute(adjustment, 1,6));
                         }
+                    }
                 }
         }
     }
@@ -794,7 +770,7 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
             case 2029:
             case 2030:
             case 2031:
-            case 3032:
+            case 2032:
             case 2033:
             case 2034:
             case 2035:
@@ -824,7 +800,6 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                     case 2029: return 57;
                     case 2030: return 60;
                     case 2031: return 65;
-                    case 2032: return 69;
                     case 2032: return 72;
                     case 2033: return 72;
                     case 2034: return 73;
@@ -843,7 +818,6 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                     case 2029: return 51;
                     case 2030: return 52;
                     case 2031: return 53;
-                    case 2032: return 53;
                     case 2032: return 54;
                     case 2033: return 54;
                     case 2034: return 55;
@@ -959,117 +933,89 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
 
         let endOfMonth = false;
 
-        if(!hasTasks) { //Trips have completed, do the next one
+        if(!hasTasks || timesToRun > 1) { //Trips have completed, do the next one
             endOfMonth = true;
-            if(month === 7) {
+
+            month++;
+            if(month > 10) { //End of the season
+                let adjustedTrialLength;
+
+                if(provider_trust <= 0.5) {
+                    adjustedTrialLength = trialLength;
+                } else if(provider_trust > 0.5 && provider_trust < 0.9) {
+                    adjustedTrialLength = Math.ceil(trialLength / 2);
+                } else if(provider_trust >= 0.9) {
+                    adjustedTrialLength = 0;
+                }
+
+                ships = module.get_ship_states();
+
                 ships.forEach(ship=>{
-                    if(ship.adoption_status.status === "InTrial" && ship.trial_period_length.trial === "HalfSeason") {
+                    let reliance_boost = year >= heavyIceCoverSeasons[0] ? 0.2 : 0;
+
+                    debugger;
+                    if(ship.adoption_status.status === "InTrial" && year >= ship.trial_year + adjustedTrialLength) {
                         let new_certainty;
-                        if(product_quality >= 0.5) {
-                            new_certainty = (1 - ship.experience_level) * 0.15;
+                        if(new_product_quality > 0.5) {
+                            new_certainty = ((ship.reliance_on_informational_environment + reliance_boost) * 0.15);
                         } else {
-                            new_certainty = (1 - ship.experience_level) * 0.075;
+                            new_certainty = (ship.reliance_on_informational_environment + reliance_boost) * 0.08;
                         }
                         new_certainty = Math.min(new_certainty, 1.0);
                         module.update_ship_certainty(ship.id, new_certainty);
                         module.update_ship_adoption_status(ship.id, "Adopted");
                     }
                 });
-            }
 
-            month++;
-            if(month > 10) { //End of the season
+                ships = module.get_ship_states();
+
                 let total_he = 0;
 
                 ships.forEach(ship=>{
-                    if(ship.experience_level >= 0.6) {
+                    if(ship.experience_level >= 0.65) {
                         total_he++;
                     }
                 });
 
-                console.log("Highly experienced ships %: " + total_he / ships.length);
-
                 month = 4;
+
+                if(year === 2022) { //beginning of a simulation
+                    if(highSeaIce) {
+                        const seasons = [2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035];
+
+                        heavyIceCoverSeasons = [];
+                        for (let i = 0; i < 3; i++) {
+
+                            let seasonToPick = getRandomInt(0, seasons.length);
+
+                            while (heavyIceCoverSeasons.includes(seasons[seasonToPick])) {
+                                seasonToPick = getRandomInt(0, seasons.length);
+                            }
+
+                            heavyIceCoverSeasons.push(seasons[seasonToPick]);
+                        }
+
+                        heavyIceCoverSeasons = heavyIceCoverSeasons.sort((a,b)=>a-b);
+                        heavyIceYears[simulation] = heavyIceCoverSeasons;
+                    }
+                }
+
                 year++;
 
                 module.update_year(year);
 
-                let adopted_total = 0;
-
-                ships.forEach(ship=>{
-                    if(ship.adoption_status.status === "Adopted") adopted_total++;
-                });
-
-                let adopted_ratio = adopted_total / ships.length;
-
-                let totalCertainty = 0;
-                let totalUtility = 0;
-
-                ships.forEach(ship=>{
-                    let y = product_quality >= ship.quality_threshold ? 1 : 0;
-                    totalCertainty += ship.certainty;
-                    totalUtility += (ship.normative_influence * adopted_ratio) + ( (1 - ship.normative_influence) * y);
-                });
-
-                if(year !== 2021) { //Graph everything
-                    let averageCertainty = totalCertainty / ships.length;
-                    let averageUtility = totalUtility / ships.length;
-
-                    monitor_charts.average_certainty.data.labels.push(year - 1);
-                    monitor_charts.average_certainty.data.datasets[0].data.push(averageCertainty);
-                    monitor_charts.average_certainty.update();
-
-                    monitor_charts.ship_count.data.labels.push(year - 1);
-                    monitor_charts.ship_count.data.datasets[0].data.push(ships.length);
-                    monitor_charts.ship_count.update();
-
-                    monitor_charts.adopters.data.labels.push(year - 1);
-                    monitor_charts.adopters.data.datasets[0].data.push(
-                        (ships.filter(ship => ship.adoption_status.status === "Adopted").length / ships.length)
-                        * 100
-                    );
-                    monitor_charts.adopters.data.datasets[1].data.push(
-                        (ships.filter(ship => ship.adoption_status.status === "InTrial").length / ships.length)
-                        * 100);
-                    monitor_charts.adopters.data.datasets[2].data.push(
-                        (ships.filter(ship => ship.adoption_status.status === "NonUser").length / ships.length)
-                        * 100);
-                    monitor_charts.adopters.update();
-
-                    monitor_charts.utility_threshold.data.labels.push(year - 1);
-                    monitor_charts.utility_threshold.data.datasets[0].data.push(averageUtility);
-                    monitor_charts.utility_threshold.update();
-
-                    ships = module.get_ship_states();
-
-                    let totalExp = 0;
-
-                    ships.forEach(ship=>totalExp+=ship.reliance_on_product);
-
-                    let avgExp = totalExp / ships.length;
-
-                    monitor_charts.reliance_on_forecast.data.labels.push(year - 1);
-                    monitor_charts.reliance_on_forecast.data.datasets[0].data.push(avgExp);
-                    monitor_charts.reliance_on_forecast.update();
-
-                    ships.forEach(ship=> {
-                        if (ship.adoption_status.status === "InTrial") {
-                            module.update_ship_adoption_status(ship.id, "Adopted");
-                        }
-                    });
-
-                    // console.log(`${non_exp.length} ${highly_exp}`);
-                }
-
                 //Update certainty
                 ships.forEach(ship=>{
-                    let new_certainty = ((1-ship.reliance_on_product)*ship.experience_level) + (ship.reliance_on_product*forecast_reliability);
+                    let reliance_boost = year >= heavyIceCoverSeasons[0] ? 0.2 : 0;
+                    let ship_reliance = ship.reliance_on_informational_environment + reliance_boost;
+
+                    let new_certainty = ((1-ship_reliance)*ship.experience_level) + (ship_reliance*informational_environment_reliability);
                     module.update_ship_certainty(ship.id, new_certainty);
                 });
 
                 ships = module.get_ship_states();
 
-                if(year >= product_release_year) {
+                if(year >= new_product_release_year) {
                     //Calculate product utility and have some people adopt
 
                     let adopted_total = 0;
@@ -1081,9 +1027,10 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                     let adopted_ratio = adopted_total / ships.length;
 
                     ships.forEach(ship=>{
-                        let y = product_quality >= ship.quality_threshold ? 1 : 0;
-                        let product_utility = (ship.normative_influence * adopted_ratio) + ( (1 - ship.normative_influence) * y);
-                        if(product_utility >= ship.utility_threshold && ship.adoption_status.status !== "Adopted") {
+                        let y = new_product_quality >= ship.quality_threshold ? 1 : 0;
+                        let new_product_utility = (ship.normative_influence * adopted_ratio) + ( (1 - ship.normative_influence) * y);
+                        if(new_product_utility >= ship.utility_threshold && ship.adoption_status.status === "NonUser") {
+                            module.update_ship_trial_year(ship.id, year);
                             module.update_ship_adoption_status(ship.id, "InTrial");
                         }
                     });
@@ -1091,7 +1038,7 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
 
                 ships = module.get_ship_states();
 
-                if(year === 2029 && should_inc_product_utility) {
+                if(year === 2029 && (should_inc_new_product_utility || highSeaIce)) {
                     ships.forEach(ship=>{
                         let new_utility_threshold = ship.early_adopter ? Math.random() * 0.6 : //Scale the value from 0.0-0.8 to 0.0-0.6
                             Math.random()*0.8;
@@ -1099,32 +1046,148 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                     });
                 }
 
-                ships.forEach(ship=>{
-                    let new_experience = Math.min(ship.experience_level+0.05, 1.0);
+                // ships.forEach(ship=>{
+                //     let new_experience = Math.min(ship.experience_level+0.05, 1.0);
+                //
+                //     module.update_ship_experience_level(ship.id, new_experience);
+                //
+                //     if(new_experience >= 0.65) {
+                //         let year_diff = 13 - (2035 - year);
+                //         let percentage = (year_diff / 13) //13 years in the model
+                //         module.update_reliance_on_informational_environment(ship.id, 0.4 + (0.2 * percentage)); //lerp between 0.4 and 0.6
+                //     } else {
+                //         let reliance = (Math.random() * 0.3) + 0.6;
+                //         module.update_reliance_on_informational_environment(ship.id, reliance);
+                //     }
+                // });
 
-                    module.update_ship_experience_level(ship.id, new_experience);
+                if(year !== 2021) { //Graph everything
+                    if(timesToRun === 1) {
+                        let adopted_total = 0;
 
+                        ships.forEach(ship=>{
+                            if(ship.adoption_status.status === "Adopted") adopted_total++;
+                        });
 
-                    if(new_experience >= 0.6) {
-                        // if(provider_trust >= 0.75) {
-                        //     let reliance = 0.9;
-                        //     module.update_reliance_on_forecast(ship.id, reliance);
-                        // } else {
-                            let year_diff = 13 - (2035 - year);
-                            let percentage = (year_diff / 13) //13 years in the model
-                            module.update_reliance_on_forecast(ship.id, 0.4 + (0.2 * percentage)); //lerp between 0.4 and 0.6
-                        // }
-                    } else {
-                        let reliance = 0.6;
-                        module.update_reliance_on_forecast(ship.id, reliance);
+                        let adopted_ratio = adopted_total / ships.length;
+
+                        let totalCertainty = 0;
+                        let totalUtility = 0;
+
+                        ships.forEach(ship=>{
+                            let y = new_product_quality >= ship.quality_threshold ? 1 : 0;
+                            totalCertainty += ship.certainty;
+                            totalUtility += (ship.normative_influence * adopted_ratio) + ( (1 - ship.normative_influence) * y);
+                        });
+
+                        let averageCertainty = totalCertainty / ships.length;
+                        let averageUtility = totalUtility / ships.length;
+
+                        monitor_charts.average_certainty.data.labels.push(year - 1);
+                        monitor_charts.average_certainty.data.datasets[0].data.push(averageCertainty);
+                        monitor_charts.average_certainty.update();
+
+                        monitor_charts.ship_count.data.labels.push(year - 1);
+                        monitor_charts.ship_count.data.datasets[0].data.push(ships.length);
+                        monitor_charts.ship_count.update();
+
+                        monitor_charts.adopters.data.labels.push(year - 1);
+                        monitor_charts.adopters.data.datasets[0].data.push(
+                            (ships.filter(ship => ship.adoption_status.status === "Adopted").length / ships.length)
+                            * 100
+                        );
+                        monitor_charts.adopters.data.datasets[1].data.push(
+                            (ships.filter(ship => ship.adoption_status.status === "InTrial").length / ships.length)
+                            * 100);
+                        monitor_charts.adopters.data.datasets[2].data.push(
+                            (ships.filter(ship => ship.adoption_status.status === "NonUser").length / ships.length)
+                            * 100);
+                        monitor_charts.adopters.update();
+
+                        monitor_charts.utility_threshold.data.labels.push(year - 1);
+                        monitor_charts.utility_threshold.data.datasets[0].data.push(averageUtility);
+                        monitor_charts.utility_threshold.update();
+
+                        ships = module.get_ship_states();
+
+                        let totalExp = 0;
+
+                        let reliance_boost = year >= heavyIceCoverSeasons[0] ? 0.2 : 0;
+
+                        ships.forEach(ship => totalExp += ship.reliance_on_informational_environment + reliance_boost);
+
+                        let avgExp = totalExp / ships.length;
+
+                        monitor_charts.reliance_on_informational_environment.data.labels.push(year - 1);
+                        monitor_charts.reliance_on_informational_environment.data.datasets[0].data.push(avgExp);
+                        monitor_charts.reliance_on_informational_environment.update();
+
                     }
-                });
 
+                    ships = module.get_ship_states();
+
+                    let adopted_total = 0;
+                    let in_trial_total = 0;
+
+                    if(year > 2027) {
+                        debugger;
+                        console.log(ships);
+                    }
+
+                    ships.forEach(ship=>{
+                        if(ship.adoption_status.status === "Adopted") adopted_total++;
+                        if(ship.adoption_status.status === "InTrial") in_trial_total++;
+                    });
+
+                    let adoptionRatio = adopted_total / ships.length;
+                    let averageInTrial = in_trial_total / ships.length;
+                    let totalCertainty = 0;
+                    let totalUtility = 0;
+                    let totalInfEnv = 0;
+
+                    ships.forEach(ship=>{
+                        let y = new_product_quality >= ship.quality_threshold ? 1 : 0;
+                        totalCertainty += ship.certainty;
+                        totalUtility += (ship.normative_influence * adoptionRatio) + ( (1 - ship.normative_influence) * y);
+                        totalInfEnv += ship.reliance_on_informational_environment;
+                    });
+
+                    let averageInfEnv = totalInfEnv / ships.length;
+                    let averageCertainty = totalCertainty / ships.length;
+                    let averageUtility = totalCertainty / ships.length;
+
+                    if(!simulationData[simulation]) simulationData[simulation] = {};
+                    simulationData[simulation][year - 1] = {
+                        averageInfEnv,
+                        averageCertainty,
+                        averageUtility,
+                        adoptionRatio,
+                        averageInTrial
+                    }
+                }
 
                 ships = module.get_ship_states();
 
                 //Stop after the year 2035
-                if(year > 2035) shouldDraw = false;
+                if(year > 2035) {
+                    if(timesToRun === 1) {
+                        shouldDraw = false;
+                        makeCsv();
+                    }
+                    else {
+                        simulation++;
+                        if(simulation === timesToRun) {
+                            shouldDraw = false;
+                            makeCsv();
+                        } else {
+                            document.getElementById("simulation-number").innerHTML = `Simulation: #${simulation + 1}`;
+                            year = 2021;
+                            month = 4;
+                            module.clear_ships();
+                            ships = module.get_ship_states();
+                        }
+                    }
+                }
             }
 
             ships = module.get_ship_states();
@@ -1140,9 +1203,31 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
             let ships_to_add = real_ship_count-ships.length;
 
             if(real_ship_count > ships.length) {
-                for(let i=0;i<real_ship_count-ships.length;i++) {
+                let new_ship_experiences = [];
 
-                    let is_early_adopter = i <= ships_to_add * proportion_early_adopters; //TODO: early adopter percentage slider
+                for(let i=0;i<ships_to_add;i++) {
+                    if(i <= ships_to_add * proportion_highly_experienced) {
+                        //console.log("Added highly experienced ship");
+                        new_ship_experiences.push((Math.random() * (1 - 0.65)) + 0.65);
+                    } else {
+                        //console.log("Added lowly experienced ship");
+                        new_ship_experiences.push(Math.random() * 0.599);
+                    }
+                }
+
+                let sorted_by_experience = ships.sort((ship_a, ship_b)=>{
+                    if(ship_a > ship_b) {
+                        return 1;
+                    } else if(ship_a < ship_b) {
+                        return -1;
+                    }
+                    return 0;
+                });
+
+                for(let i=0;i<ships_to_add;i++) {
+
+                    let is_early_adopter = (i/(real_ship_count-ships.length)) <= proportion_early_adopters;
+
                     let utility_threshold = is_early_adopter ? Math.random() * 0.8 : Math.random();
 
                     if(year >= 2029) {
@@ -1150,35 +1235,21 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                             Math.random()*0.8;
                     }
 
-                    let experience;
-
-                    if(i <= ships_to_add * proportion_highly_experienced) {
-                        //console.log("Added highly experienced ship");
-                        experience = (Math.random() * 0.4) + 0.6;
-                    } else {
-                        //console.log("Added lowly experienced ship");
-                        experience = Math.random() * 0.599;
-                    }
+                    let experience = sorted_by_experience[i];
 
                     let normative_influence = is_early_adopter ? 0.51 : 0.6;
 
-                    let reliance_on_product;
+                    let reliance_on_informational_environment;
 
-                    if(experience >= 0.6) {
-                        // if(provider_trust >= 0.75) {
-                        //     reliance_on_product = 0.9;
-                        // } else {
-                            let year_diff = 13 - (2035 - year);
-                            let percentage = (year_diff / 13); //13 years in the model
-                            reliance_on_product = 0.4 + (0.2 * percentage); //lerp between 0.4 and 0.6
-                        // }
+                    if(experience >= 0.65) {
+                        reliance_on_informational_environment = (Math.random() * 0.3) + 0.1
                     } else {
-                        reliance_on_product = 0.6;
+                        reliance_on_informational_environment = (Math.random() * 0.4) + 0.6;
                     }
 
-                    let is_product_released = year >= product_release_year;
+                    let is_product_released = year >= new_product_release_year;
 
-                    let ship_certainty = ((1-reliance_on_product)*experience) + (reliance_on_product*forecast_reliability);
+                    let ship_certainty = ((1-reliance_on_informational_environment)*experience) + (reliance_on_informational_environment*informational_environment_reliability);
 
                     let adopted_total = 0;
 
@@ -1188,8 +1259,8 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
 
                     let adopted_ratio = adopted_total / ships.length;
 
-                    let y = product_quality >= utility_threshold ? 1 : 0;
-                    let product_utility = (normative_influence * adopted_ratio) + ( (1 - normative_influence) * y);
+                    let y = new_product_quality >= utility_threshold ? 1 : 0;
+                    let new_product_utility = (normative_influence * adopted_ratio) + ( (1 - normative_influence) * y);
 
                     let adoption_status = "NonUser";
 
@@ -1201,11 +1272,11 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
 
                     let experience_ranking = sorted_ships.indexOf(experience) / sorted_ships.length;
 
-                    if(product_utility >= utility_threshold &&
+                    if(new_product_utility >= utility_threshold &&
                         is_product_released &&
                         //If it is in the highly experienced percentile, or if that's 0, if its in the top 15%
                         // (experience_percentile >= proportion_early_adopters)
-                        experience_ranking < proportion_early_adopters
+                        experience_ranking < (proportion_early_adopters)
                     ) adoption_status = "InTrial";
 
                     module.add_ship(
@@ -1216,11 +1287,12 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                         utility_threshold,
                         experience,
                         ship_certainty,
-                        reliance_on_product,
+                        reliance_on_informational_environment,
                         normative_influence,
-                        0.5,
+                        provider_trust,
                         Math.random() * 20,
-                        Math.random() * 20
+                        Math.random() * 20,
+                        year
                     );
                 } //Add a ship, return it's id
 
@@ -1239,11 +1311,49 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
 
             let taskGen = getIteratorTaskGenerator();
 
-            let filteredShips = ships.filter(ship=>ship.experience_level >= 0.6).concat(
-                ships.filter(ship=>ship.experience_level < 0.6)
+            let filteredShips = ships.filter(ship=>ship.experience_level >= 0.65).concat(
+                ships.filter(ship=>ship.experience_level < 0.65)
             );
             //If we're in a month where we need less ships than we've generated, only grab the ships that are highly experienced
             //Otherwise, use all ships
+
+            // if(year > 2021) {
+            //     ships = module.get_ship_states();
+            //
+            //     let adopted_total = 0;
+            //     let in_trial_total = 0;
+            //
+            //     ships.forEach(ship=>{
+            //         if(ship.adoption_status.status === "Adopted") adopted_total++;
+            //         if(ship.adoption_status.status === "InTrial") in_trial_total++;
+            //     });
+            //
+            //     let adoptionRatio = adopted_total / ships.length;
+            //     let averageInTrial = in_trial_total / ships.length;
+            //     let totalCertainty = 0;
+            //     let totalUtility = 0;
+            //     let totalInfEnv = 0;
+            //
+            //     ships.forEach(ship=>{
+            //         let y = new_product_quality >= ship.quality_threshold ? 1 : 0;
+            //         totalCertainty += ship.certainty;
+            //         totalUtility += (ship.normative_influence * adoptionRatio) + ( (1 - ship.normative_influence) * y);
+            //         totalInfEnv += ship.reliance_on_informational_environment;
+            //     });
+            //
+            //     let averageInfEnv = totalInfEnv / ships.length;
+            //     let averageCertainty = totalCertainty / ships.length;
+            //     let averageUtility = totalCertainty / ships.length;
+            //
+            //     if(!simulationData[simulation]) simulationData[simulation] = {};
+            //     simulationData[simulation][year] = {
+            //         averageInfEnv,
+            //         averageCertainty,
+            //         averageUtility,
+            //         adoptionRatio,
+            //         averageInTrial
+            //     }
+            // }
 
             for(let i=0;i<real_ship_count;i++) {
                 let ship = filteredShips[i];
@@ -1253,28 +1363,51 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
 
         let speed = parseInt(document.getElementById("speed").value);
 
-        for(let i=0;i<speed;i++) module.tick_game();
+        if(timesToRun === 1) for(let i=0;i<speed;i++) module.tick_game();
 
-        if(endOfMonth) updateGraph(module.get_ship_states(), module.get_routes());
-
-        if(shouldDraw) requestAnimationFrame(draw);
+        if(endOfMonth && timesToRun === 1) updateGraph(module.get_ship_states(), module.get_routes());
     }
 
     document.getElementById("play").onclick = () => {
         shouldDraw = true;
-        if(year < 2035) draw();
+
+        let callback = () => {
+            if(shouldDraw) {
+                draw();
+                requestAnimationFrame(callback);
+            }
+        }
+
+        callback();
+        // if(year < 2035) draw();
+    }
+
+    document.getElementById("record").onclick = () => {
+        shouldDraw = true;
+
+        timesToRun = 30;
+
+        let callback = () => {
+            if(shouldDraw) {
+                draw();
+                requestAnimationFrame(callback);
+            }
+        }
+
+        callback();
+        // if(year < 2035) draw();
     }
 
     //Boilerplate code for the UI as I don't want to have to load any frameworks just for some basic sliders
     let updateReleaseYearDisplay = val => {
-        product_release_year = parseInt(val.value);
+        new_product_release_year = parseInt(val.value);
         document.getElementById("release-year-label").innerHTML = `Release year (${val.value})`;
     }
 
-    let updateForecastReliability = val => {
+    let updateInformationalEnvironmentReliability = val => {
         let newval = parseInt(val.value) / 10;
-        document.getElementById("forecast-reliability-label").innerHTML = `Forecast reliability (${newval})`;
-        forecast_reliability = newval;
+        document.getElementById("informational-environment-reliability-label").innerHTML = `Informational environment reliability (${newval})`;
+        informational_environment_reliability = newval;
     }
 
     let updateProviderTrust = val => {
@@ -1284,8 +1417,8 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
     }
 
     let updateProductQuality = val => {
-        product_quality = parseFloat(val.value);
-        document.getElementById("product-quality-label").innerHTML = `Product quality (${product_quality})`;
+        new_product_quality = parseFloat(val.value);
+        document.getElementById("new-product-quality-label").innerHTML = `New-product quality (${new_product_quality})`;
     }
 
     let updatePropHE = val => {
@@ -1299,7 +1432,7 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
     }
 
     let updateIncProductUtility = val => {
-        should_inc_product_utility = val.checked;
+        should_inc_new_product_utility = val.checked;
     }
 
     let updateMinYearView = val => {
@@ -1316,26 +1449,40 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
         updateGraph(module.get_ship_states(), module.get_routes());
     }
 
+    let updateTrialLength = val => {
+        document.getElementById("trial-length-label").innerHTML = `Trial length (${val.value})`;
+
+        trialLength = parseInt(val.value);
+    }
+
     document.getElementById("release-year").onchange = e => updateReleaseYearDisplay(e.target);
-    document.getElementById("forecast-reliability").onchange = e => updateForecastReliability(e.target);
+    document.getElementById("informational-environment-reliability").onchange = e => updateInformationalEnvironmentReliability(e.target);
     document.getElementById("provider-trust").onchange = e => updateProviderTrust(e.target);
-    document.getElementById("product-quality").onchange = e => updateProductQuality(e.target);
+    document.getElementById("new-product-quality").onchange = e => updateProductQuality(e.target);
     document.getElementById("prop-he").onchange = e => updatePropHE(e.target);
     document.getElementById("prop-ea").onchange = e => updatePropEA(e.target);
     document.getElementById("inc-prod").onchange = e => updateIncProductUtility(e.target);
 
     document.getElementById("min-year-view").onchange = e => updateMinYearView(e.target);
     document.getElementById("max-year-view").onchange = e => updateMaxYearView(e.target);
+    document.getElementById("trial-length").onchange = e => updateTrialLength(e.target);
+
+    document.getElementById("high-sea-ice").onchange = e => {
+        highSeaIce = e.target.checked;
+    }
+
+    highSeaIce = document.getElementById("high-sea-ice").checked;
 
     //Initialize the slider values
     updateReleaseYearDisplay(document.getElementById("release-year"));
-    updateForecastReliability(document.getElementById("forecast-reliability"));
+    updateInformationalEnvironmentReliability(document.getElementById("informational-environment-reliability"));
     updateProviderTrust(document.getElementById("provider-trust"));
-    updateProductQuality(document.getElementById("product-quality"));
+    updateProductQuality(document.getElementById("new-product-quality"));
     updatePropHE(document.getElementById("prop-he"));
     updatePropEA(document.getElementById("prop-ea"));
     updateIncProductUtility(document.getElementById("inc-prod"));
     updateMinYearView(document.getElementById("min-year-view"));
     updateMaxYearView(document.getElementById("max-year-view"));
+    updateTrialLength(document.getElementById("trial-length"));
 
 })()
