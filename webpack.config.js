@@ -27,5 +27,13 @@ module.exports = {
     new WasmPackPlugin({
       crateDirectory: __dirname,
     }),
-  ]
+  ],
+  module: {
+    rules: [
+      {
+        test: /\.(jpg|png|svg|gif)$/,
+        type: 'javascript/auto',
+      }   
+    ]
+  }
 };

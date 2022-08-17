@@ -186,8 +186,9 @@ pub mod ship { //A grouping of data structures pertaining to how ships work
         pub experience_level: f32,
         pub certainty: f32,
         pub reliance_on_informational_environment: f32,
+        pub reliance_boost: f32,
 
-        pub normative_influence: f32,
+        pub weight_of_social_influence: f32,
         pub utility_threshold: f32,
         pub trial_period_length: TrialPeriodLength,
         pub offset_x: usize,
@@ -290,9 +291,9 @@ pub mod ship { //A grouping of data structures pertaining to how ships work
                     if self.path_progress < self.path.len() { //If our progress along the progress line
                         //is still within the length of the array of positions
 
-                        self.pos = self.path.get(self.path_progress).unwrap().clone(); //Move our position to the next part of the path
-                        self.path_progress += 1; //Increase our progress
-                        self.tasks.push(task);
+                        self.pos = self.path.get(self.path.len()-1).unwrap().clone(); //Move our position to the next part of the path
+                        // self.path_progress = ; //Increase our progress
+                        // self.tasks.push(task);
                     } else {
                         self.path_progress = 0;
                     }
@@ -421,7 +422,7 @@ pub fn get_routes() -> JsValue {
 }
 
 #[wasm_bindgen]
-pub fn add_ship(x: usize, y: usize, quality_threshold: f32, early_adopter: bool, adoption_status: &str, utility_threshold: f32, experience_level: f32, certainty: f32, reliance_on_product: f32, normative_influence: f32, provider_trust: f32, offset_x: usize, offset_y: usize, trial_year: u16) -> usize {
+pub fn add_ship(x: usize, y: usize, quality_threshold: f32, early_adopter: bool, adoption_status: &str, utility_threshold: f32, experience_level: f32, certainty: f32, reliance_on_product: f32, weight_of_social_influence: f32, provider_trust: f32, offset_x: usize, offset_y: usize, trial_year: u16) -> usize {
     let mut ships = unsafe {
         &mut (GAME_STATE.assume_init_mut()).ships
     };
@@ -441,7 +442,8 @@ pub fn add_ship(x: usize, y: usize, quality_threshold: f32, early_adopter: bool,
         experience_level,
         certainty,
         reliance_on_informational_environment: reliance_on_product,
-        normative_influence,
+        reliance_boost: 0.0,
+        weight_of_social_influence,
         trial_period_length: if provider_trust >= 0.75 { TrialPeriodLength::HalfSeason } else { TrialPeriodLength::FullSeason },
         offset_x,
         offset_y,
@@ -511,6 +513,16 @@ pub fn update_ship_adoption_status(ship: usize, status: &str) {
 }
 
 #[wasm_bindgen]
+pub fn update_ship_reliance_boost(ship: usize, boost: f32) {
+    let mut ships = unsafe {
+        &mut (GAME_STATE.assume_init_mut()).ships
+    };
+    let mut ship = ships.get(ship).unwrap().borrow_mut();
+
+    ship.reliance_boost = boost;
+}
+
+#[wasm_bindgen]
 pub fn update_ship_trial_year(ship: usize, year: usize) {
     let mut ships = unsafe {
         &mut (GAME_STATE.assume_init_mut()).ships
@@ -530,7 +542,7 @@ pub fn update_ship_certainty(ship: usize, certainty: f32) {
 }
 
 #[wasm_bindgen]
-pub fn update_reliance_on_informational_environment (ship: usize, reliance_on_informational_environment: f32) {
+pub fn update_reliance_on_informational_environment(ship: usize, reliance_on_informational_environment: f32) {
     let mut ships = unsafe {
         &mut (GAME_STATE.assume_init_mut()).ships
     };
