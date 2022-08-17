@@ -489,19 +489,23 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
     };
 
     function adoptShipsUpdateCertainty(ship) {
-        let adjustedTrialLength = trialLength;
+        let months_until_adopt = ship.months_until_adopt - 1;
 
-        if(provider_trust > 0.7) {
-            adjustedTrialLength = Math.ceil(trialLength / 2);
+        if(ship.adoption_status.status === "InTrial") {
+            module.update_ship_trial_countdown(ship.id, months_until_adopt);
+        } else {
+            return;
         }
 
-        if(ship.adoption_status.status === "InTrial" && year >= ship.trial_year + adjustedTrialLength) {
-            let new_certainty = getShipReliance(heavyIceCoverSeasons, year, ship) * 0.25;
+        console.log(months_until_adopt);
 
-            new_certainty = Math.min(new_certainty + ship.certainty, 1.0);
-            module.update_ship_certainty(ship.id, new_certainty);
-            module.update_ship_adoption_status(ship.id, "Adopted");
-        }
+        if(months_until_adopt > 0) return;
+
+        let new_certainty = getShipReliance(heavyIceCoverSeasons, year, ship) * 0.25;
+
+        new_certainty = Math.min(new_certainty + ship.certainty, 1.0);
+        module.update_ship_certainty(ship.id, new_certainty);
+        module.update_ship_adoption_status(ship.id, "Adopted");
     }
 
     function updateReliance(ship, experience) {
@@ -947,6 +951,8 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
 
             month++;
 
+            ships.forEach(ship=>adoptShipsUpdateCertainty(ship));
+
             if(month > 10) { //End of the season
                 ships = module.get_ship_states();
 
@@ -1054,12 +1060,6 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
 
                 ships = module.get_ship_states();
 
-                ships.forEach(ship => {
-                    adoptShipsUpdateCertainty(ship);
-                });
-
-                ships = module.get_ship_states();
-
                 let total_he = 0;
 
                 ships.forEach(ship=>{
@@ -1124,7 +1124,7 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                         let y = new_product_quality >= ship.quality_threshold ? 1 : 0;
                         let new_product_utility = (ship.weight_of_social_influence * adopted_ratio) + ( (1 - ship.weight_of_social_influence) * y);
                         if(new_product_utility >= ship.utility_threshold && ship.adoption_status.status === "NonUser") {
-                            module.update_ship_trial_year(ship.id, year);
+                            module.update_ship_trial_countdown(ship.id, ship.provider_trust >= 0.7 ? 3 : 7);
                             module.update_ship_adoption_status(ship.id, "InTrial");
                         }
                     });
@@ -1158,11 +1158,9 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
 
             document.getElementById("season").innerHTML = `${months[month-4]} ${year}`;
 
-            // debugger;
             let shipsInSeasonPercentage = getShipPercentage();
             let totalShips = getRealShipCount(document.getElementById("realism").value);
             let real_ship_count = Math.floor(totalShips * shipsInSeasonPercentage); //Round the number down
-            // let real_ship_count = 100;
 
             let ships_to_add = real_ship_count-ships.length;
 
@@ -1202,8 +1200,6 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                     let weight_of_social_influence = is_early_adopter ? 0.51 : 0.6;
 
                     let reliance_on_informational_environment;
-
-                    debugger;
                     if(experience > 0.65) {
                         reliance_on_informational_environment = (Math.random() * 0.3) + 0.1;
                     } else {
@@ -1256,7 +1252,7 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                         provider_trust,
                         Math.random() * 20,
                         Math.random() * 20,
-                        year
+                        provider_trust >= 0.7 ? 3 : 7
                     );
                 } //Add a ship, return it's id
 

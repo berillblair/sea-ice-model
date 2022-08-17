@@ -6,12 +6,13 @@ let cachedTextDecoder = new lTextDecoder('utf-8', { ignoreBOM: true, fatal: true
 
 cachedTextDecoder.decode();
 
-let cachegetUint8Memory0 = null;
+let cachedUint8Memory0 = new Uint8Array();
+
 function getUint8Memory0() {
-    if (cachegetUint8Memory0 === null || cachegetUint8Memory0.buffer !== wasm.memory.buffer) {
-        cachegetUint8Memory0 = new Uint8Array(wasm.memory.buffer);
+    if (cachedUint8Memory0.byteLength === 0) {
+        cachedUint8Memory0 = new Uint8Array(wasm.memory.buffer);
     }
-    return cachegetUint8Memory0;
+    return cachedUint8Memory0;
 }
 
 function getStringFromWasm0(ptr, len) {
@@ -28,6 +29,8 @@ function addHeapObject(obj) {
     if (heap_next === heap.length) heap.push(heap.length + 1);
     const idx = heap_next;
     heap_next = heap[idx];
+
+    if (typeof(heap_next) !== 'number') throw new Error('corrupt heap');
 
     heap[idx] = obj;
     return idx;
@@ -55,6 +58,8 @@ const encodeString = (typeof cachedTextEncoder.encodeInto === 'function'
 });
 
 function passStringToWasm0(arg, malloc, realloc) {
+
+    if (typeof(arg) !== 'string') throw new Error('expected a string argument');
 
     if (realloc === undefined) {
         const buf = cachedTextEncoder.encode(arg);
@@ -84,7 +89,7 @@ function passStringToWasm0(arg, malloc, realloc) {
         ptr = realloc(ptr, len, len = offset + arg.length * 3);
         const view = getUint8Memory0().subarray(ptr + offset, ptr + len);
         const ret = encodeString(arg, view);
-
+        if (ret.read !== arg.length) throw new Error('failed to pass whole string');
         offset += ret.written;
     }
 
@@ -92,12 +97,13 @@ function passStringToWasm0(arg, malloc, realloc) {
     return ptr;
 }
 
-let cachegetInt32Memory0 = null;
+let cachedInt32Memory0 = new Int32Array();
+
 function getInt32Memory0() {
-    if (cachegetInt32Memory0 === null || cachegetInt32Memory0.buffer !== wasm.memory.buffer) {
-        cachegetInt32Memory0 = new Int32Array(wasm.memory.buffer);
+    if (cachedInt32Memory0.byteLength === 0) {
+        cachedInt32Memory0 = new Int32Array(wasm.memory.buffer);
     }
-    return cachegetInt32Memory0;
+    return cachedInt32Memory0;
 }
 
 function dropObject(idx) {
@@ -111,11 +117,17 @@ function takeObject(idx) {
     dropObject(idx);
     return ret;
 }
+
+function _assertNum(n) {
+    if (typeof(n) !== 'number') throw new Error('expected a number argument');
+}
 /**
 * @param {number} width
 * @param {number} height
 */
 export function make_game(width, height) {
+    _assertNum(width);
+    _assertNum(height);
     wasm.make_game(width, height);
 }
 
@@ -129,7 +141,7 @@ export function tick_game() {
 * @returns {any}
 */
 export function get_ship_states() {
-    var ret = wasm.get_ship_states();
+    const ret = wasm.get_ship_states();
     return takeObject(ret);
 }
 
@@ -137,10 +149,15 @@ export function get_ship_states() {
 * @returns {any}
 */
 export function get_routes() {
-    var ret = wasm.get_routes();
+    const ret = wasm.get_routes();
     return takeObject(ret);
 }
 
+function _assertBoolean(n) {
+    if (typeof(n) !== 'boolean') {
+        throw new Error('expected a boolean argument');
+    }
+}
 /**
 * @param {number} x
 * @param {number} y
@@ -151,17 +168,23 @@ export function get_routes() {
 * @param {number} experience_level
 * @param {number} certainty
 * @param {number} reliance_on_product
-* @param {number} normative_influence
+* @param {number} weight_of_social_influence
 * @param {number} provider_trust
 * @param {number} offset_x
 * @param {number} offset_y
-* @param {number} trial_year
+* @param {number} months_until_adopt
 * @returns {number}
 */
-export function add_ship(x, y, quality_threshold, early_adopter, adoption_status, utility_threshold, experience_level, certainty, reliance_on_product, normative_influence, provider_trust, offset_x, offset_y, trial_year) {
-    var ptr0 = passStringToWasm0(adoption_status, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    var len0 = WASM_VECTOR_LEN;
-    var ret = wasm.add_ship(x, y, quality_threshold, early_adopter, ptr0, len0, utility_threshold, experience_level, certainty, reliance_on_product, normative_influence, provider_trust, offset_x, offset_y, trial_year);
+export function add_ship(x, y, quality_threshold, early_adopter, adoption_status, utility_threshold, experience_level, certainty, reliance_on_product, weight_of_social_influence, provider_trust, offset_x, offset_y, months_until_adopt) {
+    _assertNum(x);
+    _assertNum(y);
+    _assertBoolean(early_adopter);
+    const ptr0 = passStringToWasm0(adoption_status, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    _assertNum(offset_x);
+    _assertNum(offset_y);
+    _assertNum(months_until_adopt);
+    const ret = wasm.add_ship(x, y, quality_threshold, early_adopter, ptr0, len0, utility_threshold, experience_level, certainty, reliance_on_product, weight_of_social_influence, provider_trust, offset_x, offset_y, months_until_adopt);
     return ret >>> 0;
 }
 
@@ -176,6 +199,7 @@ export function clear_ships() {
 * @param {any} task_js
 */
 export function add_ship_task(ship, task_js) {
+    _assertNum(ship);
     wasm.add_ship_task(ship, addHeapObject(task_js));
 }
 
@@ -184,6 +208,8 @@ export function add_ship_task(ship, task_js) {
 * @param {boolean} adopter
 */
 export function set_early_adopter(ship, adopter) {
+    _assertNum(ship);
+    _assertBoolean(adopter);
     wasm.set_early_adopter(ship, adopter);
 }
 
@@ -191,6 +217,7 @@ export function set_early_adopter(ship, adopter) {
 * @param {number} year
 */
 export function update_year(year) {
+    _assertNum(year);
     wasm.update_year(year);
 }
 
@@ -199,17 +226,29 @@ export function update_year(year) {
 * @param {string} status
 */
 export function update_ship_adoption_status(ship, status) {
-    var ptr0 = passStringToWasm0(status, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    var len0 = WASM_VECTOR_LEN;
+    _assertNum(ship);
+    const ptr0 = passStringToWasm0(status, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
     wasm.update_ship_adoption_status(ship, ptr0, len0);
 }
 
 /**
 * @param {number} ship
-* @param {number} year
+* @param {number} boost
 */
-export function update_ship_trial_year(ship, year) {
-    wasm.update_ship_trial_year(ship, year);
+export function update_ship_reliance_boost(ship, boost) {
+    _assertNum(ship);
+    wasm.update_ship_reliance_boost(ship, boost);
+}
+
+/**
+* @param {number} ship
+* @param {number} months_left
+*/
+export function update_ship_trial_countdown(ship, months_left) {
+    _assertNum(ship);
+    _assertNum(months_left);
+    wasm.update_ship_trial_countdown(ship, months_left);
 }
 
 /**
@@ -217,6 +256,7 @@ export function update_ship_trial_year(ship, year) {
 * @param {number} certainty
 */
 export function update_ship_certainty(ship, certainty) {
+    _assertNum(ship);
     wasm.update_ship_certainty(ship, certainty);
 }
 
@@ -225,6 +265,7 @@ export function update_ship_certainty(ship, certainty) {
 * @param {number} reliance_on_informational_environment
 */
 export function update_reliance_on_informational_environment(ship, reliance_on_informational_environment) {
+    _assertNum(ship);
     wasm.update_reliance_on_informational_environment(ship, reliance_on_informational_environment);
 }
 
@@ -233,6 +274,7 @@ export function update_reliance_on_informational_environment(ship, reliance_on_i
 * @param {number} utility_threshold
 */
 export function update_ship_utility_threshold(ship, utility_threshold) {
+    _assertNum(ship);
     wasm.update_ship_utility_threshold(ship, utility_threshold);
 }
 
@@ -241,6 +283,7 @@ export function update_ship_utility_threshold(ship, utility_threshold) {
 * @param {number} experience_level
 */
 export function update_ship_experience_level(ship, experience_level) {
+    _assertNum(ship);
     wasm.update_ship_experience_level(ship, experience_level);
 }
 
@@ -254,49 +297,65 @@ function passArray8ToWasm0(arg, malloc) {
 * @param {Uint8Array} grid
 */
 export function upload_grid(grid) {
-    var ptr0 = passArray8ToWasm0(grid, wasm.__wbindgen_malloc);
-    var len0 = WASM_VECTOR_LEN;
+    const ptr0 = passArray8ToWasm0(grid, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
     wasm.upload_grid(ptr0, len0);
 }
 
+function logError(f, args) {
+    try {
+        return f.apply(this, args);
+    } catch (e) {
+        let error = (function () {
+            try {
+                return e instanceof Error ? `${e.message}\n\nStack:\n${e.stack}` : e.toString();
+            } catch(_) {
+                return "<failed to stringify thrown value>";
+            }
+        }());
+        console.error("wasm-bindgen: imported JS function that was not marked as `catch` threw an error:", error);
+        throw e;
+    }
+}
+
 export function __wbindgen_json_parse(arg0, arg1) {
-    var ret = JSON.parse(getStringFromWasm0(arg0, arg1));
+    const ret = JSON.parse(getStringFromWasm0(arg0, arg1));
     return addHeapObject(ret);
 };
 
 export function __wbindgen_json_serialize(arg0, arg1) {
     const obj = getObject(arg1);
-    var ret = JSON.stringify(obj === undefined ? null : obj);
-    var ptr0 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    var len0 = WASM_VECTOR_LEN;
+    const ret = JSON.stringify(obj === undefined ? null : obj);
+    const ptr0 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
     getInt32Memory0()[arg0 / 4 + 1] = len0;
     getInt32Memory0()[arg0 / 4 + 0] = ptr0;
 };
 
-export function __wbindgen_object_drop_ref(arg0) {
-    takeObject(arg0);
-};
-
-export function __wbg_new_59cb74e423758ede() {
-    var ret = new Error();
-    return addHeapObject(ret);
-};
-
-export function __wbg_stack_558ba5917b466edd(arg0, arg1) {
-    var ret = getObject(arg1).stack;
-    var ptr0 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    var len0 = WASM_VECTOR_LEN;
-    getInt32Memory0()[arg0 / 4 + 1] = len0;
-    getInt32Memory0()[arg0 / 4 + 0] = ptr0;
-};
-
-export function __wbg_error_4bb6c2a97407129a(arg0, arg1) {
+export function __wbg_error_09919627ac0992f5() { return logError(function (arg0, arg1) {
     try {
         console.error(getStringFromWasm0(arg0, arg1));
     } finally {
         wasm.__wbindgen_free(arg0, arg1);
     }
+}, arguments) };
+
+export function __wbindgen_object_drop_ref(arg0) {
+    takeObject(arg0);
 };
+
+export function __wbg_new_693216e109162396() { return logError(function () {
+    const ret = new Error();
+    return addHeapObject(ret);
+}, arguments) };
+
+export function __wbg_stack_0ddaca5d1abfb52f() { return logError(function (arg0, arg1) {
+    const ret = getObject(arg1).stack;
+    const ptr0 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    getInt32Memory0()[arg0 / 4 + 1] = len0;
+    getInt32Memory0()[arg0 / 4 + 0] = ptr0;
+}, arguments) };
 
 export function __wbindgen_throw(arg0, arg1) {
     throw new Error(getStringFromWasm0(arg0, arg1));

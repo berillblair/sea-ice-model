@@ -26,14 +26,14 @@ export function get_routes(): any;
 * @param {number} experience_level
 * @param {number} certainty
 * @param {number} reliance_on_product
-* @param {number} normative_influence
+* @param {number} weight_of_social_influence
 * @param {number} provider_trust
 * @param {number} offset_x
 * @param {number} offset_y
-* @param {number} trial_year
+* @param {number} months_until_adopt
 * @returns {number}
 */
-export function add_ship(x: number, y: number, quality_threshold: number, early_adopter: boolean, adoption_status: string, utility_threshold: number, experience_level: number, certainty: number, reliance_on_product: number, normative_influence: number, provider_trust: number, offset_x: number, offset_y: number, trial_year: number): number;
+export function add_ship(x: number, y: number, quality_threshold: number, early_adopter: boolean, adoption_status: string, utility_threshold: number, experience_level: number, certainty: number, reliance_on_product: number, weight_of_social_influence: number, provider_trust: number, offset_x: number, offset_y: number, months_until_adopt: number): number;
 /**
 */
 export function clear_ships(): void;
@@ -58,9 +58,14 @@ export function update_year(year: number): void;
 export function update_ship_adoption_status(ship: number, status: string): void;
 /**
 * @param {number} ship
-* @param {number} year
+* @param {number} boost
 */
-export function update_ship_trial_year(ship: number, year: number): void;
+export function update_ship_reliance_boost(ship: number, boost: number): void;
+/**
+* @param {number} ship
+* @param {number} months_left
+*/
+export function update_ship_trial_countdown(ship: number, months_left: number): void;
 /**
 * @param {number} ship
 * @param {number} certainty

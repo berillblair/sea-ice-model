@@ -191,9 +191,9 @@ pub mod ship { //A grouping of data structures pertaining to how ships work
         pub weight_of_social_influence: f32,
         pub utility_threshold: f32,
         pub trial_period_length: TrialPeriodLength,
+        pub months_until_adopt: usize,
         pub offset_x: usize,
-        pub offset_y: usize,
-        pub trial_year: u16
+        pub offset_y: usize
     }
 
     impl Ship {
@@ -422,7 +422,7 @@ pub fn get_routes() -> JsValue {
 }
 
 #[wasm_bindgen]
-pub fn add_ship(x: usize, y: usize, quality_threshold: f32, early_adopter: bool, adoption_status: &str, utility_threshold: f32, experience_level: f32, certainty: f32, reliance_on_product: f32, weight_of_social_influence: f32, provider_trust: f32, offset_x: usize, offset_y: usize, trial_year: u16) -> usize {
+pub fn add_ship(x: usize, y: usize, quality_threshold: f32, early_adopter: bool, adoption_status: &str, utility_threshold: f32, experience_level: f32, certainty: f32, reliance_on_product: f32, weight_of_social_influence: f32, provider_trust: f32, offset_x: usize, offset_y: usize, months_until_adopt: usize) -> usize {
     let mut ships = unsafe {
         &mut (GAME_STATE.assume_init_mut()).ships
     };
@@ -447,7 +447,7 @@ pub fn add_ship(x: usize, y: usize, quality_threshold: f32, early_adopter: bool,
         trial_period_length: if provider_trust >= 0.75 { TrialPeriodLength::HalfSeason } else { TrialPeriodLength::FullSeason },
         offset_x,
         offset_y,
-        trial_year
+        months_until_adopt
     }));
     let id = ships.len()-1;
 
@@ -523,12 +523,12 @@ pub fn update_ship_reliance_boost(ship: usize, boost: f32) {
 }
 
 #[wasm_bindgen]
-pub fn update_ship_trial_year(ship: usize, year: usize) {
+pub fn update_ship_trial_countdown(ship: usize, months_left: usize) {
     let mut ships = unsafe {
         &mut (GAME_STATE.assume_init_mut()).ships
     };
     let mut ship = ships.get(ship).unwrap().borrow_mut();
-    ship.trial_year = year as u16;
+    ship.months_until_adopt = months_left;
 }
 
 #[wasm_bindgen]
