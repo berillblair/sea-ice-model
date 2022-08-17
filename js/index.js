@@ -402,6 +402,7 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                             'rgba(153, 102, 255, 1)',
                             'rgba(255, 159, 64, 1)'
                         ],
+                        fill: "start"
                     }, {
                         label: "% Trialers",
                         data: [],
@@ -421,6 +422,7 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                             'rgba(153, 102, 255, 1)',
                             'rgba(255, 159, 64, 1)'
                         ],
+                        fill: "-1"
                     }, {
                         label: "% Non-Users",
                         data: [],
@@ -440,10 +442,18 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                             'rgba(153, 102, 255, 1)',
                             'rgba(255, 159, 64, 1)'
                         ],
+                        fill: "-1"
                     }]
                 },
                 options: {
-                    responsive: false
+                    responsive: false,
+                    scales: {
+                        y: {
+                            stacked: true,
+                            min: 0,
+                            max: 100
+                        }
+                    }
                 }
             }
         ),
@@ -499,7 +509,7 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
 
         console.log(months_until_adopt);
 
-        if(months_until_adopt > 0) return;
+        if(months_until_adopt + 1 > 0) return;
 
         let new_certainty = getShipReliance(heavyIceCoverSeasons, year, ship) * 0.25;
 
@@ -833,14 +843,6 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
     }
 
     function getShipBoost(heavyIceCoverSeasons, year, ship) {
-        // let boost = ship.reliance_boost;
-        // if(boost == 0) {
-        //     boost = ship.experience_level > 0.65 ? Math.random() * 0.2 : Math.random() * 0.4;
-        //     module.update_ship_reliance_boost(ship.id, boost);
-        // }
-        // let total = isHeavySeaIce(heavyIceCoverSeasons, year) ? boost : 0.0;
-        // console.log(total);
-        // return total;
         return ship.reliance_boost;
     }
 
@@ -950,8 +952,6 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
             endOfMonth = true;
 
             month++;
-
-            ships.forEach(ship=>adoptShipsUpdateCertainty(ship));
 
             if(month > 10) { //End of the season
                 ships = module.get_ship_states();
@@ -1156,6 +1156,10 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
 
             ships = module.get_ship_states();
 
+            ships.forEach(ship=>adoptShipsUpdateCertainty(ship));
+
+            ships = module.get_ship_states();
+
             document.getElementById("season").innerHTML = `${months[month-4]} ${year}`;
 
             let shipsInSeasonPercentage = getShipPercentage();
@@ -1189,11 +1193,6 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                     let is_early_adopter = (i/(real_ship_count-ships.length)) <= proportion_early_adopters;
 
                     let utility_threshold = is_early_adopter ? Math.random() * 0.8 : Math.random();
-
-                    if(year >= 2029) {
-                        utility_threshold = is_early_adopter ? Math.random() * 0.6 : //Scale the value from 0.0-0.8 to 0.0-0.6
-                            Math.random()*0.8;
-                    }
 
                     let experience = sorted_by_experience[i];
 
@@ -1354,14 +1353,14 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
 
     let updateMinYearView = val => {
         minGraphYear = parseInt(val.value);
-        document.getElementById("min-year-label").innerHTML = `Min graph year (${minGraphYear})`;
+        document.getElementById("min-year-label").innerHTML = `Display route pattern map starting from this year (${minGraphYear})`;
 
         updateGraph(module.get_ship_states(), module.get_routes());
     }
 
     let updateMaxYearView = val => {
         maxGraphYear = parseInt(val.value);
-        document.getElementById("max-year-label").innerHTML = `Max graph year (${maxGraphYear})`;
+        document.getElementById("max-year-label").innerHTML = `Display route pattern map ending with this year (${maxGraphYear})`;
 
         updateGraph(module.get_ship_states(), module.get_routes());
     }
