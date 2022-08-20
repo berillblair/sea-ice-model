@@ -401,8 +401,7 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                             'rgba(75, 192, 192, 1)',
                             'rgba(153, 102, 255, 1)',
                             'rgba(255, 159, 64, 1)'
-                        ],
-                        fill: "start"
+                        ]
                     }, {
                         label: "% Trialers",
                         data: [],
@@ -421,8 +420,7 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                             'rgba(75, 192, 192, 1)',
                             'rgba(153, 102, 255, 1)',
                             'rgba(255, 159, 64, 1)'
-                        ],
-                        fill: "-1"
+                        ]
                     }, {
                         label: "% Non-Users",
                         data: [],
@@ -441,15 +439,13 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                             'rgba(75, 192, 192, 1)',
                             'rgba(153, 102, 255, 1)',
                             'rgba(255, 159, 64, 1)'
-                        ],
-                        fill: "-1"
+                        ]
                     }]
                 },
                 options: {
                     responsive: false,
                     scales: {
                         y: {
-                            stacked: true,
                             min: 0,
                             max: 100
                         }
@@ -495,6 +491,45 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                     }
                 }
             }
+        ),
+        graph_he: new Chart(
+            document.getElementById("he-graph"),
+            {
+                type: "line",
+                data: {
+                    labels: [],
+
+                    datasets: [{
+                        label: "% Highly Experienced",
+                        data: [],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(255, 206, 86, 0.2)',
+                            'rgba(75, 192, 192, 0.2)',
+                            'rgba(153, 102, 255, 0.2)',
+                            'rgba(255, 159, 64, 0.2)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)'
+                        ],
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 100.0
+                        }
+                    }
+                }
+            }
         )
     };
 
@@ -507,11 +542,9 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
             return;
         }
 
-        console.log(months_until_adopt);
-
         if(months_until_adopt + 1 > 0) return;
 
-        let new_certainty = getShipReliance(heavyIceCoverSeasons, year, ship) * 0.25;
+        let new_certainty = (1 - ship.experience_level) * new_product_quality * getShipReliance(heavyIceCoverSeasons, year, ship);
 
         new_certainty = Math.min(new_certainty + ship.certainty, 1.0);
         module.update_ship_certainty(ship.id, new_certainty);
@@ -999,7 +1032,16 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                             * 100);
                         monitor_charts.adopters.update();
 
+                        let he_total = 0;
+
                         ships = module.get_ship_states();
+
+                        monitor_charts.graph_he.data.labels.push(year);
+                        ships.forEach(ship=>{
+                            if(ship.experience_level < 0.65) console.log(ship.experience_level);
+                        });
+                        monitor_charts.graph_he.data.datasets[0].data.push(Math.ceil((ships.filter(ship => ship.experience_level >= 0.65).length / ships.length) * 100));
+                        monitor_charts.graph_he.update();
 
                         let totalExp = 0;
 
@@ -1024,7 +1066,7 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                     });
 
                     let adoptionRatio = adopted_total / ships.length;
-                    let averageInTrial = in_trial_total / ships.length;
+                    let inTrialRatio = in_trial_total / ships.length;
                     let totalCertainty = 0;
                     let totalUtility = 0;
                     let totalInfEnv = 0;
@@ -1046,14 +1088,14 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                         averageCertainty,
                         averageUtility,
                         adoptionRatio,
-                        averageInTrial
+                        averageInTrial: inTrialRatio
                     }
                 }
 
                 ships.forEach(ship=>{
                     let new_experience = Math.min(ship.experience_level + 0.05, 1.0);
-                    module.update_ship_experience_level(new_experience);
-                    if(new_experience > 0.65) {
+                    module.update_ship_experience_level(ship.id, new_experience);
+                    if(new_experience >= 0.65 && ship.experience_level < 0.65) {
                         updateReliance(ship, new_experience);
                     }
                 });
@@ -1089,7 +1131,6 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
 
                         heavyIceCoverSeasons = heavyIceCoverSeasons.sort((a,b)=>a-b);
                         heavyIceYears[simulation] = heavyIceCoverSeasons;
-                        console.log(heavyIceCoverSeasons);
                     }
                 }
 
@@ -1172,14 +1213,14 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                 let new_ship_experiences = [];
 
                 for(let i=0;i<ships_to_add;i++) {
-                    if(i < ships_to_add * proportion_highly_experienced) {
+                    if((i/ships_to_add) < proportion_highly_experienced) {
                         new_ship_experiences.push((Math.random() * 0.35) + 0.65);
                     } else {
                         new_ship_experiences.push(Math.random() * 0.649999);
                     }
                 }
 
-                let sorted_by_experience = ships.map(ship=>ship.experience_level).concat(new_ship_experiences).sort((ship_a, ship_b)=>{
+                let new_experiences_sorted = new_ship_experiences.sort((ship_a, ship_b)=>{
                     if(ship_a > ship_b) {
                         return 1;
                     } else if(ship_a < ship_b) {
@@ -1189,12 +1230,11 @@ let months = ["April", "May", "June", "July", "August", "September", "October"];
                 });
 
                 for(let i=0;i<ships_to_add;i++) {
-
-                    let is_early_adopter = (i/(real_ship_count-ships.length)) <= proportion_early_adopters;
+                    let is_early_adopter = (i/(ships_to_add)) <= proportion_early_adopters;
 
                     let utility_threshold = is_early_adopter ? Math.random() * 0.8 : Math.random();
 
-                    let experience = sorted_by_experience[i];
+                    let experience = new_experiences_sorted[i];
 
                     let weight_of_social_influence = is_early_adopter ? 0.51 : 0.6;
 

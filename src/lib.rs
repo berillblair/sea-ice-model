@@ -566,9 +566,8 @@ pub fn update_ship_experience_level(ship: usize, experience_level: f32) {
     let mut ships = unsafe {
         &mut (GAME_STATE.assume_init_mut()).ships
     };
-
     let mut ship = ships.get(ship).unwrap().borrow_mut();
-    ship.experience_level = experience_level;
+    ship.experience_level = experience_level as f32;
 }
 
 #[wasm_bindgen]
