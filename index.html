@@ -54,14 +54,51 @@
     </style>
   </head>
   <body style="margin: 0; display: inline-block;">
-    <h3>Refresh the web page in order to run another simulation</h3>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.4.1/dist/chart.min.js"></script>
-
+<!--    <script src="https://cdn.jsdelivr.net/npm/regression@2.0.1/dist/regression.min.js "></script>-->
 
     <div class="horiz">
       <div class="vert centered" id="canvas-thing">
-        <div class="centered horiz"><canvas id="canvas" width="1326" height="1034"></canvas></div>
-        <div class="centered horiz"><h2 id="season" style="color: black;"></h2></div>
+        <div class="centered horiz"><canvas id="scatter" width="1326" height="1034"></canvas></div>
+        <div class="centered horiz">
+          <div class="vert">
+            <label>
+              X axis
+              <select id="x-axis">
+                <option value="weight_of_social_influence">Weight of social influence</option>
+                <option value="quality_threshold">Quality threshold</option>
+                <option value="experience_level">Experience level</option>
+                <option value="certainty">Certainty</option>
+                <option value="reliance_on_informational_environment">Reliance on informational environment</option>
+                <option value="utility threshold">Utility threshold</option>
+                <option value="kd">Knowledge of domain</option>
+              </select>
+            </label>
+            <label>
+              Y axis
+              <select id="y-axis">
+                <option value="weight_of_social_influence">Weight of social influence</option>
+                <option value="quality_threshold">Quality threshold</option>
+                <option value="experience_level">Experience level</option>
+                <option value="certainty">Certainty</option>
+                <option value="reliance_on_informational_environment">Reliance on informational environment</option>
+                <option value="utility_threshold">Utility threshold</option>
+                <option value="kd">Knowledge of domain</option>
+              </select>
+            </label>
+            <label>
+              Regression
+              <select id="regression-type">
+                <option value="linear">Linear</option>
+                <option value="exponential">Exponential</option>
+                <option value="logarithmic">Logarithmic</option>
+                <option value="power">Power</option>
+                <option value="polynomial">Polynomial</option>
+              </select>
+            </label>
+            <button id="graph-regression">Graph</button>
+          </div>
+        </div>
       </div>
 
 
@@ -72,7 +109,8 @@
           <canvas id="adopters" width="400px" height="400px"></canvas>
         </div>
         <div class="horiz">
-          <canvas id="utility-threshold" width="400px" height="400px"></canvas>
+          <canvas id="average-kd" width="400px" height="400px"></canvas>
+          <canvas id="he-graph" width="400px" height="400px"></canvas>
           <canvas id="informational-environment-reliance" width="400px" height="400px"></canvas>
         </div>
       </div>
@@ -82,28 +120,24 @@
       <div class="horiz" id="buttons">
         <div class="centered vert">
           <label for="release-year" id="release-year-label">Release year</label>
+          <label for="release-year" id="release-year-val"></label>
           <input type="range" value="2022" min="2022" max="2035" id="release-year" />
-          <label id="speed-label" for="speed">Model Speed</label>
-          <input type="range" value="150" min="1" max="300" id="speed" />
-          <label id="informational-environment-reliability-label" for="informational-environment-reliability">Reliability of informational environment</label>
-          <input type="range" value="6" min="1" max="10" id="informational-environment-reliability" />
-          <label id="provider-trust-label" for="provider-trust">Provider Trust</label>
-          <input type="range" value="5" min="1" max="10" id="provider-trust" />
+          <label id="informational-environment-reliability-label" for="informational-environment-reliability">Informational environment quality</label>
+          <label id="informational-environment-reliability-val" for="informational-environment-reliability"></label>
+          <input type="range" value="0.5" min="0.05" max="1.0" step="0.05" id="informational-environment-reliability" />
           <label id="new-product-quality-label" for="new-product-quality">Quality of new product</label>
-          <input type="range" value="0.5" min="0.1" step="0.1" max="1" id="new-product-quality" />
+          <label id="new-product-quality-val" for="new-product-quality"></label>
+          <input type="range" value="0.5" min="0.05" step="0.05" max="1" id="new-product-quality" />
         </div>
         <div class="centered vert">
-          <label id="prop-he-label" for="prop-he">Proportion Highly Experienced</label>
-          <input type="range" value="0.40" min="0" step="0.01" max="1" id="prop-he" />
-          <label id="prop-ea-label" for="prop-he">Proportion Early Adopters</label>
-          <input type="range" value="0.33" min="0" step="0.01" max="1" id="prop-ea" />
+          <label id="frac-he-label" for="frac-he">Fraction Highly Experienced</label>
+          <label id="frac-he-val" for="frac-he"></label>
+          <input type="range" value="0.5" min="0" step="0.05" max="1" id="frac-he" />
+          <label id="decay-label" for="decay">Decay factor</label>
+          <label id="decay-val" for="decay"></label>
+          <input type="range" value="0.0" min="0.0" step="0.05" max="1" id="decay" />
 
-          <div>
-            <input type="checkbox" id="high-sea-ice" />
-            <label for="high-sea-ice">Enable High Sea Ice Cover Years?</label>
-          </div>
-
-          <label for="realism">Growth Scenario</label>
+          <label style="display: none;" id="realism-val" for="realism">Growth Scenario</label>
 
           <select name="Model Realism" id="realism">
             <option value="realistic">Realistic</option>
@@ -112,13 +146,11 @@
           </select>
         </div>
         <div class="centered vert">
-          <label id="min-year-label" for="min-year-view">Display route pattern map starting from this year</label>
-          <input type="range" value="2022" min="2022" step="1" max="2035" id="min-year-view" />
-          <label id="max-year-label" for="min-year-view">Display route pattern map ending with this year</label>
-          <input type="range" value="2035" min="2022" step="1" max="2035" id="max-year-view" />
-
-          <button id="play">Play</button>
-          <button id="record">Run 30 Times and Record</button>
+          <button id="play">Run</button>
+          <button id="play-30">Run 30 Times</button>
+          <button id="play-csv">Run + CSV</button>
+          <button id="record-30">Run 30 Times + CSV</button>
+          <button id="record-decay">Decay simulation</button>
 
           <p id="simulation-number"></p>
         </div>
